@@ -1,49 +1,50 @@
 // ============================================
-// Flask CRUD Todo — Frontend JavaScript
+// TaskFlow — Frontend JS (Bootstrap 5)
 // ============================================
 
-const API_BASE = 'http://localhost:5000/api';
+// Configurable API base URL (environment-friendly)
+const API_BASE = window.API_BASE || 'http://localhost:5000/api';
+
 let token = localStorage.getItem('token') || null;
-
-// ---------- DOM refs ----------
-const taskList = document.getElementById('taskList');
-const taskInput = document.getElementById('taskInput');
-const addBtn = document.getElementById('addBtn');
-const clearBtn = document.getElementById('clearBtn');
-const reviewBtn = document.getElementById('reviewBtn');
-const totalCount = document.getElementById('totalCount');
-const doneCount = document.getElementById('doneCount');
-const pendingCount = document.getElementById('pendingCount');
-const progressFill = document.getElementById('progressFill');
-const progressPercent = document.getElementById('progressPercent');
-const progressRing = document.getElementById('progressRing');
-const focusPending = document.getElementById('focusPending');
-const focusBadge = document.getElementById('focusBadge');
-const reviewBadge = document.getElementById('reviewBadge');
-const themeToggle = document.getElementById('themeToggle');
-const dateDisplay = document.querySelector('#dateDisplay span');
-
-// Auth modal elements
-const authModal = document.getElementById('authModal');
-const authTitle = document.getElementById('authTitle');
-const authUsername = document.getElementById('authUsername');
-const authEmail = document.getElementById('authEmail');
-const authPassword = document.getElementById('authPassword');
-const authSubmit = document.getElementById('authSubmit');
-const authSwitchLink = document.getElementById('authSwitchLink');
-const authSwitchText = document.getElementById('authSwitchText');
-const authClose = document.getElementById('authClose');
-
-// ---------- State ----------
 let tasks = [];
 let currentFilter = 'all';
 let isRegisterMode = false;
+let authModalInstance = null;
 const circumference = 2 * Math.PI * 28;
+
+// ---------- DOM refs ----------
+const taskListEl   = document.getElementById('taskList');
+const taskInput    = document.getElementById('taskInput');
+const addBtn       = document.getElementById('addBtn');
+const clearBtn     = document.getElementById('clearBtn');
+const reviewBtn    = document.getElementById('reviewBtn');
+const logoutBtn    = document.getElementById('logoutBtn');
+const themeToggle  = document.getElementById('themeToggle');
+
+const totalCountEl   = document.getElementById('totalCount');
+const doneCountEl    = document.getElementById('doneCount');
+const pendingCountEl = document.getElementById('pendingCount');
+const progressFill   = document.getElementById('progressFill');
+const progressPercent= document.getElementById('progressPercent');
+const progressRing   = document.getElementById('progressRing');
+const focusPending   = document.getElementById('focusPending');
+const reviewBadge    = document.getElementById('reviewBadge');
+const dateDisplay    = document.getElementById('dateDisplay');
+
+// Auth modal
+const authUsername   = document.getElementById('authUsername');
+const authEmail      = document.getElementById('authEmail');
+const emailGroup     = document.getElementById('emailGroup');
+const authPassword   = document.getElementById('authPassword');
+const authSubmit     = document.getElementById('authSubmit');
+const authTitle      = document.getElementById('authTitle');
+const authSwitchLink = document.getElementById('authSwitchLink');
+const authSwitchText = document.getElementById('authSwitchText');
 
 // ---------- Utilities ----------
 function escapeHtml(str) {
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = String(str);
     return div.innerHTML;
 }
 
@@ -54,110 +55,88 @@ function authHeaders() {
     };
 }
 
-// ---------- Theme ----------
-function loadTheme() {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-    }
-}
-
-function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme');
-    if (current === 'dark') {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-    } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-    }
+function showError(msg) {
+    // Simple user-friendly error
+    alert('⚠️ ' + msg);
 }
 
 // ---------- Auth Modal ----------
 function showAuthModal() {
-    authModal.style.display = 'flex';
-    if (isRegisterMode) {
-        authTitle.textContent = 'Register';
-        authEmail.style.display = 'block';
-        authSubmit.textContent = 'Register';
-        authSwitchText.textContent = 'Already have an account?';
-        authSwitchLink.textContent = 'Login';
-    } else {
-        authTitle.textContent = 'Login';
-        authEmail.style.display = 'none';
-        authSubmit.textContent = 'Login';
-        authSwitchText.textContent = "Don't have an account?";
-        authSwitchLink.textContent = 'Register';
+    if (!authModalInstance) {
+        authModalInstance = new bootstrap.Modal(document.getElementById('authModal'));
     }
+    authModalInstance.show();
 }
-
-function closeAuthModal() {
-    authModal.style.display = 'none';
-    authUsername.value = '';
-    authEmail.value = '';
-    authPassword.value = '';
+function hideAuthModal() {
+    if (authModalInstance) authModalInstance.hide();
 }
 
 authSwitchLink.addEventListener('click', (e) => {
     e.preventDefault();
     isRegisterMode = !isRegisterMode;
-    showAuthModal();
+    authTitle.textContent = isRegisterMode ? 'Register' : 'Login';
+    emailGroup.style.display = isRegisterMode ? 'block' : 'none';
+    authSubmit.textContent = isRegisterMode ? 'Register' : 'Login';
+    authSwitchText.textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+    authSwitchLink.textContent = isRegisterMode ? 'Login' : 'Register';
 });
 
 authSubmit.addEventListener('click', async () => {
     const username = authUsername.value.trim();
     const password = authPassword.value.trim();
-    const email = authEmail.value.trim();
+    const email    = authEmail.value.trim();
 
     if (isRegisterMode) {
-        if (!username || !email || !password) return alert('All fields required');
+        if (!username || !email || !password) return showError('All fields required');
         await register(username, email, password);
     } else {
-        if (!username || !password) return alert('Username and password required');
+        if (!username || !password) return showError('Username and password required');
         await login(username, password);
     }
 });
 
-authClose.addEventListener('click', closeAuthModal);
-
-// ---------- API Calls (Auth) ----------
+// ---------- API: Auth ----------
 async function login(username, password) {
-    const res = await fetch(`${API_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (data.success) {
-        token = data.token;
-        localStorage.setItem('token', token);
-        closeAuthModal();
-        await fetchTodos();
-    } else {
-        alert('Login failed: ' + data.error);
+    try {
+        const res = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            hideAuthModal();
+            logoutBtn.classList.remove('d-none');
+            await fetchTodos();
+        } else {
+            showError(data.error || 'Login failed');
+        }
+    } catch (err) {
+        showError('Network error: ' + err.message);
     }
 }
 
 async function register(username, email, password) {
-    const res = await fetch(`${API_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-    });
-    const data = await res.json();
-    if (data.success) {
-        token = data.token;
-        localStorage.setItem('token', token);
-        closeAuthModal();
-        await fetchTodos();
-    } else {
-        alert('Registration failed: ' + data.error);
+    try {
+        const res = await fetch(`${API_BASE}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            hideAuthModal();
+            logoutBtn.classList.remove('d-none');
+            await fetchTodos();
+        } else {
+            showError(data.error || 'Registration failed');
+        }
+    } catch (err) {
+        showError('Network error: ' + err.message);
     }
 }
 
@@ -166,10 +145,17 @@ function logout() {
     localStorage.removeItem('token');
     tasks = [];
     render();
+    logoutBtn.classList.add('d-none');
+    isRegisterMode = false;
+    authTitle.textContent = 'Login';
+    emailGroup.style.display = 'none';
+    authSubmit.textContent = 'Login';
     showAuthModal();
 }
 
-// ---------- API Calls (Todos) ----------
+logoutBtn.addEventListener('click', logout);
+
+// ---------- API: Todos ----------
 async function fetchTodos() {
     if (!token) return showAuthModal();
     try {
@@ -181,16 +167,14 @@ async function fetchTodos() {
                 id: t.id,
                 title: t.title,
                 description: t.description || '',
-                completed: t.completed === 1,
-                created_at: t.created_at
+                completed: t.completed === 1
             }));
             render();
         } else {
-            alert('API Error: ' + json.error);
+            showError(json.error || 'Failed to load tasks');
         }
     } catch (err) {
-        console.error(err);
-        alert('Cannot connect to Flask server. Make sure it is running on port 5000.');
+        showError('Cannot connect to server. Is Flask running on port 5000?');
     }
 }
 
@@ -204,13 +188,10 @@ async function addTask(title) {
         });
         if (res.status === 401) return logout();
         const json = await res.json();
-        if (json.success) {
-            await fetchTodos();
-        } else {
-            alert('Error: ' + json.error);
-        }
+        if (json.success) await fetchTodos();
+        else showError(json.error || 'Failed to add task');
     } catch (err) {
-        alert('Network error: ' + err.message);
+        showError('Network error: ' + err.message);
     }
 }
 
@@ -218,22 +199,18 @@ async function toggleTask(id) {
     if (!token) return showAuthModal();
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    const newCompleted = !task.completed;
     try {
         const res = await fetch(`${API_BASE}/todos/${id}`, {
             method: 'PUT',
             headers: authHeaders(),
-            body: JSON.stringify({ completed: newCompleted })
+            body: JSON.stringify({ completed: !task.completed })
         });
         if (res.status === 401) return logout();
         const json = await res.json();
-        if (json.success) {
-            await fetchTodos();
-        } else {
-            alert('Error: ' + json.error);
-        }
+        if (json.success) await fetchTodos();
+        else showError(json.error || 'Failed to update task');
     } catch (err) {
-        alert('Network error: ' + err.message);
+        showError('Network error: ' + err.message);
     }
 }
 
@@ -247,13 +224,10 @@ async function deleteTask(id) {
         });
         if (res.status === 401) return logout();
         const json = await res.json();
-        if (json.success) {
-            await fetchTodos();
-        } else {
-            alert('Error: ' + json.error);
-        }
+        if (json.success) await fetchTodos();
+        else showError(json.error || 'Failed to delete task');
     } catch (err) {
-        alert('Network error: ' + err.message);
+        showError('Network error: ' + err.message);
     }
 }
 
@@ -261,10 +235,14 @@ async function clearAllTasks() {
     if (!token) return showAuthModal();
     if (tasks.length === 0) return;
     if (!confirm('Delete ALL tasks?')) return;
-    for (const t of tasks) {
-        await fetch(`${API_BASE}/todos/${t.id}`, { method: 'DELETE', headers: authHeaders() });
+    try {
+        for (const t of tasks) {
+            await fetch(`${API_BASE}/todos/${t.id}`, { method: 'DELETE', headers: authHeaders() });
+        }
+        await fetchTodos();
+    } catch (err) {
+        showError('Network error: ' + err.message);
     }
-    await fetchTodos();
 }
 
 // ---------- Render ----------
@@ -273,70 +251,64 @@ function render() {
     if (currentFilter === 'done') filtered = tasks.filter(t => t.completed);
     else if (currentFilter === 'pending') filtered = tasks.filter(t => !t.completed);
 
-    const sorted = [...filtered].sort((a, b) => a.completed === b.completed ? 0 : a.completed ? 1 : -1);
+    const sorted = [...filtered].sort((a, b) =>
+        a.completed === b.completed ? 0 : a.completed ? 1 : -1);
 
     if (sorted.length === 0) {
         const msg = currentFilter === 'done' ? 'No completed tasks yet.' :
                     currentFilter === 'pending' ? 'All tasks are completed! 🎉' :
                     'No tasks yet — add one above!';
-        taskList.innerHTML = `
-            <div class="empty">
-                <i class="far fa-smile"></i>
-                <p>${msg}</p>
-            </div>
-        `;
+        taskListEl.innerHTML = `
+            <li class="list-group-item text-center text-muted py-5">
+                <i class="far fa-smile fs-2 d-block mb-2"></i>
+                <p class="mb-0">${msg}</p>
+            </li>`;
     } else {
-        let html = '';
-        sorted.forEach(task => {
+        taskListEl.innerHTML = sorted.map(task => {
             const checked = task.completed ? 'done' : '';
-            const titleClass = task.completed ? 'completed' : '';
-            const badgeClass = task.completed ? 'done' : 'pending';
-            const badgeText = task.completed ? 'Done' : 'In Progress';
-            html += `
-                <div class="task-item" data-id="${task.id}">
-                    <div class="check ${checked}" data-id="${task.id}">
-                        ${task.completed ? '<i class="fas fa-check"></i>' : ''}
+            const titleClass = task.completed ? 'task-done' : '';
+            const badge = task.completed
+                ? '<span class="badge bg-success ms-2">Done</span>'
+                : '<span class="badge bg-warning text-dark ms-2">In Progress</span>';
+            return `
+                <li class="list-group-item d-flex align-items-center gap-3" data-id="${task.id}">
+                    <div class="form-check m-0">
+                        <input class="form-check-input task-check" type="checkbox" ${task.completed ? 'checked' : ''}
+                               data-id="${task.id}" style="cursor:pointer; width:20px; height:20px;" />
                     </div>
-                    <div class="info">
-                        <div class="title ${titleClass}">
-                            ${escapeHtml(task.title)}
-                            <span class="badge ${badgeClass}">${badgeText}</span>
-                        </div>
-                        ${task.description ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${escapeHtml(task.description)}</div>` : ''}
+                    <div class="flex-grow-1">
+                        <span class="fw-semibold ${titleClass}">${escapeHtml(task.title)}</span>${badge}
+                        ${task.description ? `<div class="small text-muted">${escapeHtml(task.description)}</div>` : ''}
                     </div>
-                    <button class="delete" data-id="${task.id}" title="Delete"><i class="fas fa-times"></i></button>
-                </div>
-            `;
-        });
-        taskList.innerHTML = html;
+                    <button class="btn btn-sm btn-outline-danger task-delete" data-id="${task.id}" title="Delete">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </li>`;
+        }).join('');
     }
 
-    // Update stats
+    // Stats
     const total = tasks.length;
     const done = tasks.filter(t => t.completed).length;
     const pending = total - done;
     const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
-    totalCount.textContent = total;
-    doneCount.textContent = done;
-    pendingCount.textContent = pending;
-    progressFill.style.width = pct + '%';
-    progressPercent.textContent = pct + '%';
-    focusPending.textContent = pending;
-    focusBadge.innerHTML = `<i class="fas fa-arrow-right"></i> ${pending} remaining`;
-    reviewBadge.textContent = `${done}/${total}`;
-
-    // Progress ring
-    const offset = circumference - (pct / 100) * circumference;
-    progressRing.style.strokeDashoffset = offset;
+    totalCountEl.textContent   = total;
+    doneCountEl.textContent    = done;
+    pendingCountEl.textContent = pending;
+    progressFill.style.width   = pct + '%';
+    progressPercent.textContent= pct + '%';
+    focusPending.textContent   = pending;
+    reviewBadge.textContent    = `${done}/${total}`;
+    progressRing.style.strokeDashoffset = circumference - (pct / 100) * circumference;
 }
 
-// ---------- Event Listeners ----------
+// ---------- Event Listeners (CRUD) ----------
 addBtn.addEventListener('click', async () => {
     const val = taskInput.value.trim();
     if (!val) {
-        taskInput.style.borderColor = '#ef4444';
-        setTimeout(() => taskInput.style.borderColor = '', 400);
+        taskInput.classList.add('is-invalid');
+        setTimeout(() => taskInput.classList.remove('is-invalid'), 500);
         return;
     }
     await addTask(val);
@@ -348,26 +320,16 @@ taskInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addBtn.click();
 });
 
-taskList.addEventListener('click', (e) => {
-    const check = e.target.closest('.check');
+// Event delegation for checkboxes & delete buttons
+taskListEl.addEventListener('click', (e) => {
+    const check = e.target.closest('.task-check');
     if (check) {
-        const id = parseInt(check.dataset.id);
-        if (id) toggleTask(id);
+        toggleTask(parseInt(check.dataset.id));
         return;
     }
-    const del = e.target.closest('.delete');
+    const del = e.target.closest('.task-delete');
     if (del) {
-        const id = parseInt(del.dataset.id);
-        if (id) deleteTask(id);
-        return;
-    }
-    const titleEl = e.target.closest('.title');
-    if (titleEl) {
-        const item = titleEl.closest('.task-item');
-        if (item) {
-            const id = parseInt(item.dataset.id);
-            if (id) toggleTask(id);
-        }
+        deleteTask(parseInt(del.dataset.id));
     }
 });
 
@@ -376,24 +338,44 @@ clearBtn.addEventListener('click', clearAllTasks);
 reviewBtn.addEventListener('click', () => {
     const done = tasks.filter(t => t.completed).length;
     const total = tasks.length;
-    if (total === 0) alert('📝 No tasks yet. Add some to get started!');
+    if (total === 0) showError('No tasks yet. Add some to get started!');
     else if (done === total) alert('🎉 Amazing! You\'ve completed all tasks!');
     else alert(`📊 You've completed ${done} out of ${total} tasks. Keep going! 💪`);
 });
 
-document.querySelectorAll('.tabs button').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+// Tabs (Bootstrap nav-pills)
+document.querySelectorAll('.nav-pills button').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.querySelectorAll('.nav-pills button').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        const id = this.id;
-        if (id === 'tabAll') currentFilter = 'all';
-        else if (id === 'tabPending') currentFilter = 'pending';
-        else if (id === 'tabDone') currentFilter = 'done';
+        if (this.id === 'tabAll') currentFilter = 'all';
+        else if (this.id === 'tabPending') currentFilter = 'pending';
+        else if (this.id === 'tabDone') currentFilter = 'done';
         render();
     });
 });
 
-themeToggle.addEventListener('click', toggleTheme);
+// Theme toggle
+themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+});
+
+// ---------- Init ----------
+function initTheme() {
+    if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+}
 
 function setDate() {
     const now = new Date();
@@ -404,11 +386,11 @@ function setDate() {
     }
 }
 
-// ---------- Init ----------
-loadTheme();
+initTheme();
 setDate();
 
 if (token) {
+    logoutBtn.classList.remove('d-none');
     fetchTodos();
 } else {
     showAuthModal();
