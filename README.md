@@ -1,5 +1,5 @@
 🌊 TaskFlow
-A modern, full‑stack task management application with JWT authentication, built with Flask (API), MySQL (database), and HTML/CSS/JS (frontend). TaskFlow features a beautiful glass‑morphism UI, dark/light mode, real‑time progress tracking, and complete user isolation.
+A modern, full‑stack task management application with JWT authentication, built with Flask (API), MySQL (database), and Bootstrap 5 (frontend). TaskFlow features a clean, responsive UI with dark/light mode, real‑time progress tracking, and complete user isolation.
 
 ✨ Features
 🔐 Authentication & Security
@@ -11,27 +11,31 @@ Protected CRUD endpoints — todos are per‑user
 
 Tokens expire after 24 hours (configurable)
 
+Environment variables validated on startup
+
 ⚙️ Backend (Flask API)
 Complete REST API with GET, POST, PUT, DELETE
 
 MySQL connection pooling with context manager and retry logic
 
-Environment variables validated on startup
-
 CORS enabled for cross‑origin requests
 
 Comprehensive error handling with JSON responses
 
-🎨 Frontend (HTML/CSS/JS)
-Login / Register modal with smooth transitions
+🎨 Frontend (Bootstrap 5)
+Clean, responsive UI built with Bootstrap 5
 
-Token‑based authentication (JWT stored in localStorage)
+Login / Register using Bootstrap Modal
 
-Beautiful glass‑morphism UI with floating gradient shapes
+Task cards using Bootstrap Cards & List Group
+
+Grid layout with Bootstrap Grid system
+
+Utility classes for spacing, flex, colors, and typography
 
 Dark / Light mode toggle (saved in localStorage)
 
-Real‑time progress ring and stats
+Real‑time progress ring, progress bar, and stats
 
 Filter tasks (All / Pending / Done)
 
@@ -45,7 +49,8 @@ MySQL 8.0+	Database
 mysql-connector-python	MySQL driver
 PyJWT	JWT authentication
 python-dotenv	Environment variables
-HTML5 / CSS3	Frontend
+Bootstrap 5	Frontend framework
+HTML5 / CSS3	Frontend structure
 Vanilla JavaScript	Frontend logic
 Font Awesome	Icons
 📦 Installation & Setup
@@ -162,22 +167,26 @@ TaskFlow/
 ├── db.py               # MySQL connection pool manager
 ├── auth.py             # JWT authentication helpers
 ├── routes.py           # All API endpoints and route handlers
-├── index.html          # Frontend UI (HTML + CSS)
+├── index.html          # Frontend UI (Bootstrap 5)
 ├── app.js              # Frontend logic (JavaScript)
 ├── requirements.txt    # Python dependencies
 ├── .env                # Environment variables (gitignored)
 ├── .gitignore          # Git ignore rules
 └── README.md           # Project documentation
 🎨 UI Highlights
-Glass‑morphism cards with backdrop blur effect
+Bootstrap 5 Cards for focus section and task container
 
-Floating gradient shapes animating in the background
+Bootstrap Modal for login/register
+
+Bootstrap Grid (.row, .col-4) for stats layout
+
+Bootstrap List Group for task items
+
+Utility classes (d-flex, text-muted, fw-bold, gap-2) for clean styling
 
 Progress ring and progress bar that update in real‑time
 
 Dark / Light mode toggle with localStorage persistence
-
-Smooth transitions and micro‑interactions
 
 Responsive layout for mobile, tablet, and desktop
 
@@ -212,3 +221,5 @@ GitHub
 LinkedIn
 
 <p align="center">Made with ❤️ by Chetana Gujare</p> <p align="center"><strong>TaskFlow</strong> — Where your tasks flow to completion.</p>
+
+
