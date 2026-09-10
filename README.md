@@ -212,7 +212,3 @@ GitHub
 LinkedIn
 
 <p align="center">Made with ❤️ by Chetana Gujare</p> <p align="center"><strong>TaskFlow</strong> — Where your tasks flow to completion.</p>
-github pe kaise dalu
-We need to answer: "github pe kaise dalu" meaning how to put this project on GitHub. The user has been working on a project "TaskFlow" (formerly Flask-CRUD-Todo). They likely have the files locally and want to push to GitHub. We should give step-by-step instructions for pushing to GitHub, assuming they have Git installed. Also mention creating a new repository on GitHub, initializing git, committing, adding remote, pushing. Since they have been working with VS Code, we can mention using the integrated terminal.
-
-
