@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flask CRUD Todo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        /* ========== RESET & BASE ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #f0f2f8;
+            --bg-card: rgba(255, 255, 255, 0.72);
+            --bg-glass: rgba(255, 255, 255, 0.50);
+            --border-glass: rgba(255, 255, 255, 0.60);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06);
+            --text-primary: #0f0f1a;
+            --text-secondary: #4a4a6a;
+            --text-muted: #8a8aa8;
+            --gradient-1: linear-gradient(135deg, #7c3aed, #4f46e5);
+            --gradient-2: linear-gradient(135deg, #4f46e5, #06b6d4);
+            --gradient-3: linear-gradient(135deg, #7c3aed, #ec4899);
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 32px;
+            --radius-full: 9999px;
+            --transition: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #080816;
+            --bg-card: rgba(18, 18, 40, 0.80);
+            --bg-glass: rgba(18, 18, 40, 0.50);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --text-primary: #e8ecf4;
+            --text-secondary: #9aa5b5;
+            --text-muted: #6b7a8f;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 24px;
+            transition: background 0.5s ease, color 0.5s ease;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ========== FLOATING SHAPES ========== */
+        .bg-shapes {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.30;
+            animation: floatShape 20s ease-in-out infinite alternate;
+        }
+        .shape-1 { width: 500px; height: 500px; top: -150px; right: -100px; background: radial-gradient(circle, #7c3aed, #4f46e5); }
+        .shape-2 { width: 400px; height: 400px; bottom: -100px; left: -80px; background: radial-gradient(circle, #06b6d4, #4f46e5); animation-delay: 3s; }
+        .shape-3 { width: 300px; height: 300px; top: 50%; left: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, #ec4899, #7c3aed); animation-delay: 6s; opacity: 0.15; }
+        .shape-4 { width: 350px; height: 350px; bottom: 20%; right: 20%; background: radial-gradient(circle, #f59e0b, #7c3aed); animation-delay: 9s; }
+        @keyframes floatShape {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(10px, -10px) scale(1.05); }
+        }
+        [data-theme="dark"] .shape { opacity: 0.15; }
+
+        /* ========== GLASS ========== */
+        .glass {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            box-shadow: var(--shadow-glass);
+        }
+
+        /* ========== APP CONTAINER ========== */
+        .app-container {
+            max-width: 860px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .sub {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .date-badge {
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-glass);
+        }
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-full);
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+        .theme-toggle:hover {
+            background: var(--gradient-1);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        /* ========== FOCUS CARD ========== */
+        .focus-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 22px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            border: 1px solid var(--border-glass);
+            box-shadow: var(--shadow-glass);
+            margin-bottom: 24px;
+            transition: all var(--transition);
+        }
+        .focus-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.08);
+        }
+        .focus-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .focus-icon {
+            width: 52px; height: 52px;
+            background: var(--gradient-1);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 22px;
+            box-shadow: 0 8px 24px rgba(79,70,229,0.25);
+        }
+        .focus-text h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .focus-text h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .focus-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .focus-meta i { color: #4f46e5; }
+        .focus-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .progress-ring {
+            position: relative;
+            width: 70px; height: 70px;
+        }
+        .progress-ring svg { transform: rotate(-90deg); }
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 6;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.6s ease;
+        }
+        .progress-ring .bg { stroke: var(--border-glass); }
+        .progress-ring .fg { stroke: url(#grad); }
+        .progress-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .focus-badge {
+            background: var(--gradient-1);
+            color: #fff;
+            padding: 6px 18px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* ========== TABS ========== */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-glass);
+            margin-bottom: 20px;
+            width: fit-content;
+            box-shadow: var(--shadow-glass);
+        }
+        .tabs button {
+            background: transparent;
+            border: none;
+            padding: 10px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+        .tabs button.active {
+            background: var(--gradient-1);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+        }
+        .tabs button:hover:not(.active) {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* ========== TASK SECTION ========== */
+        .task-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 28px 30px;
+            border: 1px solid var(--border-glass);
+            box-shadow: var(--shadow-glass);
+        }
+        .task-section .title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .task-section .title i { color: #4f46e5; }
+
+        .add-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .add-row input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+            transition: border 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .add-row input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79,70,229,0.1);
+        }
+        .add-row button {
+            background: var(--gradient-1);
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+        .add-row button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(79,70,229,0.3);
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 420px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .task-list::-webkit-scrollbar { width: 4px; }
+        .task-list::-webkit-scrollbar-thumb {
+            background: var(--border-glass);
+            border-radius: var(--radius-full);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            transition: all var(--transition);
+        }
+        .task-item:hover {
+            background: var(--bg-card);
+            border-color: var(--border-glass);
+            box-shadow: var(--shadow-glass);
+        }
+        .task-item .check {
+            width: 22px; height: 22px;
+            border: 2px solid var(--border-glass);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            color: transparent;
+            flex-shrink: 0;
+            background: var(--bg-card);
+        }
+        .task-item .check.done {
+            background: var(--gradient-1);
+            border-color: #4f46e5;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+        }
+        .task-item .info { flex: 1; min-width: 0; }
+        .task-item .info .title {
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .task-item .info .title.completed {
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+        .task-item .info .badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: var(--radius-full);
+        }
+        .badge.done { background: #d1fae5; color: #065f46; }
+        .badge.pending { background: #fef3c7; color: #92400e; }
+        .task-item .delete {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: 0.2s;
+            opacity: 0.3;
+        }
+        .task-item:hover .delete { opacity: 0.7; }
+        .task-item .delete:hover {
+            opacity: 1;
+            color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
+        }
+        .empty i { font-size: 40px; display: block; margin-bottom: 12px; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-glass);
+        }
+        .stats .left { display: flex; gap: 28px; }
+        .stats .stat { display: flex; align-items: baseline; gap: 6px; }
+        .stats .stat .num {
+            font-size: 20px;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stats .stat .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .stats .clear {
+            background: transparent;
+            border: 1px solid var(--border-glass);
+            padding: 6px 20px;
+            border-radius: var(--radius-full);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .stats .clear:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .progress-bar {
+            margin-top: 16px;
+            width: 100%;
+            height: 4px;
+            background: var(--border-glass);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--gradient-1);
+            border-radius: var(--radius-full);
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        .review-btn {
+            margin-top: 20px;
+            padding: 14px 36px;
+            background: #1f2937;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            float: right;
+            font-family: 'Inter', sans-serif;
+        }
+        .review-btn:hover {
+            background: #374151;
+            transform: translateY(-2px);
+        }
+        .review-btn .badge {
+            background: rgba(255,255,255,0.15);
+            padding: 2px 12px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+        }
+
+        .footer {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-glass);
+            padding-top: 20px;
+        }
+        .footer i { color: #ec4899; }
+
+        /* ========== AUTH MODAL ========== */
+        .auth-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .auth-box {
+            max-width: 400px;
+            width: 100%;
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            position: relative;
+            text-align: center;
+        }
+        .auth-box h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .auth-box input {
+            width: 100%;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            border: 2px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+            transition: border 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .auth-box input:focus { border-color: #4f46e5; }
+        .auth-box button {
+            width: 100%;
+            padding: 14px;
+            background: var(--gradient-1);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: 'Inter', sans-serif;
+        }
+        .auth-box button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(79,70,229,0.3);
+        }
+        .auth-switch {
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .auth-switch a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .auth-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .auth-close:hover {
+            background: var(--border-glass);
+            color: var(--text-primary);
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 640px) {
+            body { padding: 16px; }
+            .header { flex-direction: column; align-items: stretch; }
+            .focus-card { flex-direction: column; align-items: stretch; }
+            .focus-progress { justify-content: space-between; }
+            .tabs { width: 100%; justify-content: stretch; }
+            .tabs button { flex: 1; justify-content: center; padding: 8px 12px; font-size: 13px; }
+            .task-section { padding: 20px 16px; }
+            .add-row { flex-direction: column; }
+            .add-row button { justify-content: center; }
+            .stats { flex-direction: column; align-items: stretch; }
+            .stats .left { justify-content: space-around; }
+            .review-btn { float: none; width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Shapes -->
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="header">
+            <div>
+                <h1>📋 Learning Schedule</h1>
+                <p class="sub"><i class="fas fa-calendar-check"></i> Stay on track · Day 8</p>
+            </div>
+            <div class="header-actions">
+                <div class="date-badge" id="dateDisplay">
+                    <i class="far fa-calendar-alt"></i>
+                    <span></span>
+                </div>
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Focus Card -->
+        <section class="focus-card">
+            <div class="focus-left">
+                <div class="focus-icon"><i class="fas fa-bullseye"></i></div>
+                <div class="focus-text">
+                    <h3>Today's Focus</h3>
+                    <h2>Client-Side Todo List App</h2>
+                    <div class="focus-meta">
+                        <span><i class="far fa-calendar-check"></i> Day 8</span>
+                        <span><i class="far fa-clock"></i> <span id="focusPending">0</span> tasks remaining</span>
+                    </div>
+                </div>
+            </div>
+            <div class="focus-progress">
+                <div class="progress-ring">
+                    <svg width="70" height="70" viewBox="0 0 70 70">
+                        <defs>
+                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#7c3aed" />
+                                <stop offset="100%" stop-color="#4f46e5" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="bg" cx="35" cy="35" r="28" stroke="var(--border-glass)" stroke-width="6" fill="none" />
+                        <circle class="fg" cx="35" cy="35" r="28" stroke="url(#grad)" stroke-width="6"
+                                stroke-linecap="round"
+                                stroke-dasharray="175.93"
+                                stroke-dashoffset="175.93"
+                                id="progressRing" />
+                    </svg>
+                    <span class="progress-text" id="progressPercent">0%</span>
+                </div>
+                <span class="focus-badge" id="focusBadge"><i class="fas fa-arrow-right"></i> 0 remaining</span>
+            </div>
+        </section>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="active" id="tabAll"><i class="fas fa-list-ul"></i> All</button>
+            <button id="tabPending"><i class="far fa-clock"></i> Pending</button>
+            <button id="tabDone"><i class="fas fa-check-circle"></i> Done</button>
+        </div>
+
+        <!-- Task Section -->
+        <section class="task-section">
+            <div class="title"><i class="fas fa-tasks"></i> Task Implementation Steps</div>
+
+            <div class="add-row">
+                <input type="text" id="taskInput" placeholder="Add a new task…" autocomplete="off" />
+                <button id="addBtn"><i class="fas fa-plus"></i> Add</button>
+            </div>
+
+            <div class="task-list" id="taskList"></div>
+
+            <div class="stats">
+                <div class="left">
+                    <div class="stat"><span class="num" id="totalCount">0</span><span class="label">Total</span></div>
+                    <div class="stat"><span class="num" id="doneCount">0</span><span class="label">Done</span></div>
+                    <div class="stat"><span class="num" id="pendingCount">0</span><span class="label">Pending</span></div>
+                </div>
+                <button class="clear" id="clearBtn"><i class="fas fa-trash-alt"></i> Clear All</button>
+            </div>
+
+            <div class="progress-bar">
+                <div class="fill" id="progressFill" style="width:0%;"></div>
+            </div>
+
+            <button class="review-btn" id="reviewBtn">
+                <i class="fas fa-thumbs-up"></i> I've Reviewed the Steps
+                <span class="badge" id="reviewBadge">0/0</span>
+            </button>
+        </section>
+
+        <div class="footer">
+            &copy; 2026 — Made with <i class="fas fa-heart"></i> by Chetana Gujare · Flask API
+        </div>
+    </div>
+
+    <!-- ========== AUTH MODAL ========== -->
+    <div id="authModal" class="auth-modal" style="display:none;">
+        <div class="auth-box glass">
+            <h2 id="authTitle">Login</h2>
+            <input type="text" id="authUsername" placeholder="Username" />
+            <input type="email" id="authEmail" placeholder="Email (register only)" style="display:none;" />
+            <input type="password" id="authPassword" placeholder="Password" />
+            <button id="authSubmit">Login</button>
+            <p class="auth-switch">
+                <span id="authSwitchText">Don't have an account?</span>
+                <a href="#" id="authSwitchLink">Register</a>
+            </p>
+            <button id="authClose" class="auth-close"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
